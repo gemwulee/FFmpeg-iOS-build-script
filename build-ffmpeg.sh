@@ -1,7 +1,12 @@
 #!/bin/sh
 
 # directories
-SOURCE="ffmpeg-3.1.1"
+FF_VERSION="4.2"
+#FF_VERSION="snapshot-git"
+if [[ $FFMPEG_VERSION != "" ]]; then
+  FF_VERSION=$FFMPEG_VERSION
+fi
+SOURCE="ffmpeg-$FF_VERSION"
 FAT="FFmpeg-iOS"
 
 SCRATCH="scratch"
@@ -23,7 +28,7 @@ fi
 
 if [ "$FDK_AAC" ]
 then
-	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libfdk-aac"
+	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libfdk-aac --enable-nonfree"
 fi
 
 # avresample
@@ -34,7 +39,7 @@ ARCHS="arm64 armv7 x86_64 i386"
 COMPILE="y"
 LIPO="y"
 
-DEPLOYMENT_TARGET="6.0"
+DEPLOYMENT_TARGET="8.0"
 
 if [ "$*" ]
 then
@@ -105,6 +110,15 @@ then
 
 		XCRUN_SDK=`echo $PLATFORM | tr '[:upper:]' '[:lower:]'`
 		CC="xcrun -sdk $XCRUN_SDK clang"
+
+		# force "configure" to use "gas-preprocessor.pl" (FFmpeg 3.3)
+		if [ "$ARCH" = "arm64" ]
+		then
+		    AS="gas-preprocessor.pl -arch aarch64 -- $CC"
+		else
+		    AS="gas-preprocessor.pl -- $CC"
+		fi
+
 		CXXFLAGS="$CFLAGS"
 		LDFLAGS="$CFLAGS"
 		if [ "$X264" ]
@@ -122,6 +136,7 @@ then
 		    --target-os=darwin \
 		    --arch=$ARCH \
 		    --cc="$CC" \
+		    --as="$AS" \
 		    $CONFIGURE_FLAGS \
 		    --extra-cflags="$CFLAGS" \
 		    --extra-ldflags="$LDFLAGS" \
